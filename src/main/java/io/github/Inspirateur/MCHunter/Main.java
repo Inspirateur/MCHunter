@@ -53,16 +53,11 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 
 	@EventHandler
 	public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-		if (!hunterStarted) {
+		if (!gameStarted) {
+			event.setCancelled(true);
+		} else if(!hunterStarted && !event.getDamager().getUniqueId().equals(huntee)) {
 			event.setCancelled(true);
 		}
-	}
-
-	@EventHandler
-	public void onPlayerJoin(PlayerJoinEvent event) {
-		Player player = event.getPlayer();
-		player.setWalkSpeed(0.2f);
-		player.setFlySpeed(0.2f);
 	}
 
 	@EventHandler
