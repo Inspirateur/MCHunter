@@ -6,6 +6,7 @@ Features:
 - a `/start` command to officially start the game
 - players can't move or interact before the game is started
 - `/headStart <seconds>` to give some head start to the speedrunner (called "huntee") before the hunters can move
+- `/compassUpdate <seconds>` to change the refresh frequency of the compass (default is 1)
 - `/huntee` to be the speedrunner
 - The game automatically ends when either the speedrunner or the Ender Dragon is dead, with an appropriate victory message
 

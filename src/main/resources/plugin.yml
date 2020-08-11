@@ -4,9 +4,9 @@ main: io.github.Inspirateur.MCHunter.Main
 author: Inspirateur
 description: Plugin to play the hunter game in Minecraft
 commands:
-  compassCD:
-    description: Set the cooldown of the hunter's compass
-    usage: /compassCD <seconds>
+  compassUpdate:
+    description: Set the refresh time of the hunter's compass
+    usage: /compassUpdate <seconds>
   huntee:
     description: Set yourself as the huntee
     usage: /huntee

@@ -1,8 +1,5 @@
 package io.github.Inspirateur.MCHunter;
-import org.bukkit.Bukkit;
-import org.bukkit.GameRule;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EnderDragon;
@@ -21,7 +18,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
-
 import java.util.Objects;
 import java.util.UUID;
 
@@ -31,6 +27,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	private boolean gameStarted = false;
 	private boolean hunterStarted = false;
 	private int headStart = 10;
+	private int compassUpdate = 1;
 	private UUID huntee = null;
 	private String hunteeName;
 
@@ -55,17 +52,17 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	}
 
 	@EventHandler
-	public void onPlayerJoin(PlayerJoinEvent event) {
-		Player player = event.getPlayer();
-		player.setWalkSpeed(0.2f);
-		player.setFlySpeed(0.2f);
-	}
-
-	@EventHandler
 	public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
 		if (!hunterStarted) {
 			event.setCancelled(true);
 		}
+	}
+
+	@EventHandler
+	public void onPlayerJoin(PlayerJoinEvent event) {
+		Player player = event.getPlayer();
+		player.setWalkSpeed(0.2f);
+		player.setFlySpeed(0.2f);
 	}
 
 	@EventHandler
@@ -81,12 +78,14 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 
 	@EventHandler
 	public void onPlayerMove(PlayerMoveEvent event) {
-		if(!event.getFrom().getBlock().equals(Objects.requireNonNull(event.getTo()).getBlock())) {
-			if (!gameStarted) {
-				event.setCancelled(true);
-			} else if(!hunterStarted) {
-				if(!event.getPlayer().getUniqueId().equals(huntee)) {
+		if(event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
+			if (!event.getFrom().getBlock().equals(Objects.requireNonNull(event.getTo()).getBlock())) {
+				if (!gameStarted) {
 					event.setCancelled(true);
+				} else if (!hunterStarted) {
+					if (!event.getPlayer().getUniqueId().equals(huntee)) {
+						event.setCancelled(true);
+					}
 				}
 			}
 		}
@@ -125,17 +124,34 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 
 	@Override
 	public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, String label, String[] args) {
-		switch (label) {
+		switch (label.toLowerCase()) {
+			case "compassupdate":
+				compassUpdate(sender, args);
+				break;
 			case "huntee":
 				huntee(sender);
 				break;
-			case "headStart":
+			case "headstart":
 				headStart(sender, args);
+				break;
 			case "start":
 				start(sender);
 				break;
 		}
 		return true;
+	}
+
+	private void compassUpdate(CommandSender sender, String[] args) {
+		if(args.length == 0) {
+			sender.sendMessage("You need to provide a time (in seconds), like /compassUpdate 2");
+			return;
+		}
+		try {
+			compassUpdate = Integer.parseInt(args[0]);
+			Bukkit.broadcastMessage(String.format("Compass refresh time is now set to %d seconds", compassUpdate));
+		} catch (NumberFormatException e) {
+			sender.sendMessage(String.format("%s is not a valid integer", args[0]));
+		}
 	}
 
 	private void huntee(CommandSender sender) {
@@ -148,6 +164,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	private void headStart(CommandSender sender, String[] args) {
 		if(args.length == 0) {
 			sender.sendMessage("You need to provide a time (in seconds), like /headStart 10");
+			return;
 		}
 		try {
 			headStart = Integer.parseInt(args[0]);
@@ -207,13 +224,14 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 				}
 			}
 		};
-		updateCompass.runTaskTimer(this, 0, 20);
+		updateCompass.runTaskTimer(this, 0, 20*compassUpdate);
 		gameStarted = true;
 		Bukkit.broadcastMessage(String.format(
 			"The Hunt is on !\n" +
-				"%s is the huntee\n" +
-				"The hunters will be able to move in %d seconds",
-			hunteeName, headStart
+			"%s is the huntee\n" +
+			"The compass refreshes every %d seconds\n" +
+			"The hunters will be able to move in %d seconds",
+			hunteeName, compassUpdate, headStart
 		));
 	}
 }
