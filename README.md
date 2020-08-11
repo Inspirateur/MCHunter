@@ -8,3 +8,5 @@ Features:
 - `/headStart <seconds>` to give some head start to the speedrunner (called "huntee") before the hunters can move
 - `/huntee` to be the speedrunner
 - The game automatically ends when either the speedrunner or the Ender Dragon is dead, with an appropriate victory message
+
+*Note: I am not affiliated with Dream in any way, he does not use this plugin in his videos, check [Dream's Patreon](https://www.patreon.com/DreamWasTaken) if you want to get his plugin.* 
