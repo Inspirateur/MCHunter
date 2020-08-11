@@ -1,0 +1,18 @@
+name: MCHunter
+version: "1.0"
+main: io.github.Inspirateur.MCHunter.Main
+author: Inspirateur
+description: Plugin to play the hunter game in Minecraft
+commands:
+  compassCD:
+    description: Set the cooldown of the hunter's compass
+    usage: /compassCD <seconds>
+  huntee:
+    description: Set yourself as the huntee
+    usage: /huntee
+  headStart:
+    description: Set the head start given to the huntee
+    usage: /headStart <seconds>
+  start:
+    description: Start the game, which will end either when the Dragon or the huntee is dead.
+    usage: /start
