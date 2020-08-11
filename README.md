@@ -1,6 +1,6 @@
 # MCHunter
 
-A Minecraft Plugin that allows you to play the Hunter VS Speedrunner game, as seen on [Dream's Youtube channel](https://www.youtube.com/channel/UCTkXRDQl0luXxVQrRQvWS6w)).
+A Minecraft Plugin that allows you to play the Hunter VS Speedrunner game, as seen on [Dream's Youtube channel](https://www.youtube.com/channel/UCTkXRDQl0luXxVQrRQvWS6w).
 
 Features:
 - a `/start` command to officially start the game
