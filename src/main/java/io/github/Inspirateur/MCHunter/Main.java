@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -63,18 +64,20 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 
 	@EventHandler
 	public void onPlayerInteract(PlayerInteractEvent event) {
-		if (!gameStarted) {
-			event.setCancelled(true);
-		} else if(!hunterStarted) {
-			if(!event.getPlayer().getUniqueId().equals(huntee)) {
+		if(event.getPlayer().getGameMode() == GameMode.SURVIVAL) {
+			if (!gameStarted) {
 				event.setCancelled(true);
+			} else if (!hunterStarted) {
+				if (!event.getPlayer().getUniqueId().equals(huntee)) {
+					event.setCancelled(true);
+				}
 			}
 		}
 	}
 
 	@EventHandler
 	public void onPlayerMove(PlayerMoveEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
+		if(event.getPlayer().getGameMode() == GameMode.SURVIVAL) {
 			if (!event.getFrom().getBlock().equals(Objects.requireNonNull(event.getTo()).getBlock())) {
 				if (!gameStarted) {
 					event.setCancelled(true);
@@ -119,18 +122,16 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 		}
 	}
 
+	@EventHandler
+	public void onPlayerChangeWorld(PlayerChangedWorldEvent event) {
+		if(gameStarted && !event.getPlayer().getUniqueId().equals(huntee)) {
+			giveCompass(event.getPlayer());
+		}
+	}
+
 	private void giveCompass(Player player) {
-		ItemStack compass = findCompass(player);
-		if(compass == null) {
-			compass = new ItemStack(Material.COMPASS, 1);
-		}
-		CompassMeta compassMeta = (CompassMeta) compass.getItemMeta();
-		if(compassMeta != null) {
-			compassMeta.setLodestoneTracked(false);
-			compass.setItemMeta(compassMeta);
-		}
-		player.getInventory().setItem(compasses.get(player.getUniqueId()), compass);
-		compasses.put(player.getUniqueId(), 0);
+		findCompass(player);
+		player.getInventory().setItem(compasses.get(player.getUniqueId()), new ItemStack(Material.COMPASS, 1));
 	}
 
 	@EventHandler
@@ -254,9 +255,13 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 						if(player.getWorld().getEnvironment() == huntee.getWorld().getEnvironment()) {
 							location = huntee.getLocation();
 						} else {
-							location = traces.get(huntee.getWorld().getEnvironment());
+							location = traces.get(player.getWorld().getEnvironment());
+							if(location == null) {
+								System.out.println("no memory of huntee here");
+								location = player.getLocation();
+							}
 						}
-						if(player.getWorld().getEnvironment().equals(World.Environment.NORMAL)) {
+						if(player.getWorld().getEnvironment() == World.Environment.NORMAL) {
 							player.setCompassTarget(location);
 						} else {
 							int inventorySlot = compasses.get(player.getUniqueId());
@@ -266,6 +271,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 							}
 							if(compass != null) {
 								CompassMeta compassMeta = (CompassMeta) compass.getItemMeta();
+								compassMeta.setLodestoneTracked(false);
 								compassMeta.setLodestone(location);
 								compass.setItemMeta(compassMeta);
 								player.getInventory().setItem(compasses.get(player.getUniqueId()), compass);
