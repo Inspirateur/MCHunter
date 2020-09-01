@@ -213,20 +213,20 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			sender.sendMessage("A huntee must be defined before the game can start  (/huntee to become the huntee)");
 			return;
 		}
-		Player huntee = Bukkit.getPlayer(this.huntee);
-		if (huntee == null) {
+		Player hunteeP = Bukkit.getPlayer(this.huntee);
+		if (hunteeP == null) {
 			sender.sendMessage("The huntee could not be found (is the huntee offline ?), try redefining it again");
 			return;
 		}
 		if(world != null) {
 			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
 		}
-		huntee.setFoodLevel(20);
-		huntee.setSaturation(5);
-		huntee.setHealth(20);
+		hunteeP.setFoodLevel(20);
+		hunteeP.setSaturation(5);
+		hunteeP.setHealth(20);
 
 		for(Player player: Bukkit.getServer().getOnlinePlayers()) {
-			if(!player.getUniqueId().equals(huntee.getUniqueId())) {
+			if(!player.getUniqueId().equals(hunteeP.getUniqueId())) {
 				giveCompass(player);
 			}
 		}
@@ -235,7 +235,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			@Override
 			public void run() {
 				for(Player player: Bukkit.getServer().getOnlinePlayers()) {
-					if(!player.getUniqueId().equals(huntee.getUniqueId())) {
+					if(!player.getUniqueId().equals(huntee)) {
 						player.setFoodLevel(20);
 						player.setSaturation(5);
 						player.setHealth(20);
@@ -249,32 +249,35 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 		BukkitRunnable updateCompass = new BukkitRunnable() {
 			@Override
 			public void run() {
-				for(Player player: Bukkit.getServer().getOnlinePlayers()) {
-					if(!player.getUniqueId().equals(huntee.getUniqueId())) {
-						Location location;
-						if(player.getWorld().getEnvironment() == huntee.getWorld().getEnvironment()) {
-							location = huntee.getLocation();
-						} else {
-							location = traces.get(player.getWorld().getEnvironment());
-							if(location == null) {
-								System.out.println("no memory of huntee here");
-								location = player.getLocation();
+				Player hunteeP = Bukkit.getPlayer(huntee);
+				if(hunteeP != null) {
+					for(Player player: Bukkit.getServer().getOnlinePlayers()) {
+						if(!player.getUniqueId().equals(huntee)) {
+							Location location;
+							if(player.getWorld().getEnvironment() == hunteeP.getWorld().getEnvironment()) {
+								location = hunteeP.getLocation();
+							} else {
+								location = traces.get(player.getWorld().getEnvironment());
+								if(location == null) {
+									System.out.println("no memory of huntee here");
+									location = player.getLocation();
+								}
 							}
-						}
-						if(player.getWorld().getEnvironment() == World.Environment.NORMAL) {
-							player.setCompassTarget(location);
-						} else {
-							int inventorySlot = compasses.get(player.getUniqueId());
-							ItemStack compass = player.getInventory().getItem(inventorySlot);
-							if(compass == null || !(compass.getType() == Material.COMPASS)) {
-								compass = findCompass(player);
-							}
-							if(compass != null) {
-								CompassMeta compassMeta = (CompassMeta) compass.getItemMeta();
-								compassMeta.setLodestoneTracked(false);
-								compassMeta.setLodestone(location);
-								compass.setItemMeta(compassMeta);
-								player.getInventory().setItem(compasses.get(player.getUniqueId()), compass);
+							if(player.getWorld().getEnvironment() == World.Environment.NORMAL) {
+								player.setCompassTarget(location);
+							} else {
+								int inventorySlot = compasses.get(player.getUniqueId());
+								ItemStack compass = player.getInventory().getItem(inventorySlot);
+								if(compass == null || !(compass.getType() == Material.COMPASS)) {
+									compass = findCompass(player);
+								}
+								if(compass != null) {
+									CompassMeta compassMeta = (CompassMeta) compass.getItemMeta();
+									compassMeta.setLodestoneTracked(false);
+									compassMeta.setLodestone(location);
+									compass.setItemMeta(compassMeta);
+									player.getInventory().setItem(compasses.get(player.getUniqueId()), compass);
+								}
 							}
 						}
 					}
