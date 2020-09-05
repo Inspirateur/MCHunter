@@ -25,13 +25,16 @@ import java.util.*;
 public class Main extends JavaPlugin implements Plugin, Listener {
 	private World world = null;
 	private boolean gameStarted = false;
+	private boolean gameEnded = false;
 	private boolean hunterStarted = false;
-	private int headStart = 10;
+	private boolean pause = false;
+	private int headStart = 120;
+	private int traitors = 0;
 	private int compassUpdate = 1;
 	private UUID huntee = null;
 	private String hunteeName;
-	private Map<UUID, Integer> compasses = new HashMap<>();
-	private Map<World.Environment, Location> traces = new HashMap<>();
+	private final Map<UUID, Integer> compasses = new HashMap<>();
+	private final Map<World.Environment, Location> traces = new HashMap<>();
 
 	@Override
 	public void onDisable() {
@@ -55,23 +58,17 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 
 	@EventHandler
 	public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-		if (!gameStarted) {
-			event.setCancelled(true);
-		} else if(!hunterStarted && !event.getDamager().getUniqueId().equals(huntee)) {
-			event.setCancelled(true);
-		}
+		event.setCancelled(
+			pause || !gameStarted || (!hunterStarted && !event.getDamager().getUniqueId().equals(huntee))
+		);
 	}
 
 	@EventHandler
 	public void onPlayerInteract(PlayerInteractEvent event) {
 		if(event.getPlayer().getGameMode() == GameMode.SURVIVAL) {
-			if (!gameStarted) {
-				event.setCancelled(true);
-			} else if (!hunterStarted) {
-				if (!event.getPlayer().getUniqueId().equals(huntee)) {
-					event.setCancelled(true);
-				}
-			}
+			event.setCancelled(
+				pause || !gameStarted || (!hunterStarted && !event.getPlayer().getUniqueId().equals(huntee))
+			);
 		}
 	}
 
@@ -79,13 +76,9 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	public void onPlayerMove(PlayerMoveEvent event) {
 		if(event.getPlayer().getGameMode() == GameMode.SURVIVAL) {
 			if (!event.getFrom().getBlock().equals(Objects.requireNonNull(event.getTo()).getBlock())) {
-				if (!gameStarted) {
-					event.setCancelled(true);
-				} else if (!hunterStarted) {
-					if (!event.getPlayer().getUniqueId().equals(huntee)) {
-						event.setCancelled(true);
-					}
-				}
+				event.setCancelled(
+					pause || !gameStarted || (!hunterStarted && !event.getPlayer().getUniqueId().equals(huntee))
+				);
 			}
 		}
 		// store the last location of the huntee in every world
@@ -95,8 +88,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	}
 
 	private void endGame() {
-		gameStarted = false;
-		hunterStarted = false;
+		gameEnded = true;
 		for(Player player: Bukkit.getServer().getOnlinePlayers()) {
 			player.setGameMode(GameMode.SPECTATOR);
 		}
@@ -104,10 +96,9 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 
 	@EventHandler
 	public void onPlayerDeath(PlayerDeathEvent event) {
-		if(gameStarted) {
+		if(gameStarted && !gameEnded) {
 			Player player = event.getEntity();
 			if(player.getUniqueId().equals(huntee)) {
-				player.setBedSpawnLocation(player.getLocation());
 				Bukkit.broadcastMessage("The huntee died, the hunters have won !");
 				endGame();
 			}
@@ -140,6 +131,8 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			Player player = event.getPlayer();
 			if(!player.getUniqueId().equals(huntee)) {
 				giveCompass(player);
+			} else {
+				event.setRespawnLocation(player.getLocation());
 			}
 		}
 	}
@@ -159,6 +152,18 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			case "start":
 				start(sender);
 				break;
+			case "creative":
+				gamemode(sender, GameMode.CREATIVE);
+				break;
+			case "spectator":
+				gamemode(sender, GameMode.SPECTATOR);
+				break;
+			case "pause":
+				pause();
+				break;
+			case "traitor":
+				traitors(sender, args);
+				break;
 		}
 		return true;
 	}
@@ -177,10 +182,12 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	}
 
 	private void huntee(CommandSender sender) {
-		Player player = (Player)sender;
-		huntee = player.getUniqueId();
-		hunteeName = player.getName();
-		Bukkit.broadcastMessage(String.format("%s is now the huntee", hunteeName));
+		if (!gameStarted) {
+			Player player = (Player)sender;
+			huntee = player.getUniqueId();
+			hunteeName = player.getName();
+			Bukkit.broadcastMessage(String.format("%s is now the huntee", hunteeName));
+		}
 	}
 
 	private void headStart(CommandSender sender, String[] args) {
@@ -191,6 +198,19 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 		try {
 			headStart = Integer.parseInt(args[0]);
 			Bukkit.broadcastMessage(String.format("Head start given to the huntee is now set to %d seconds", headStart));
+		} catch (NumberFormatException e) {
+			sender.sendMessage(String.format("%s is not a valid integer", args[0]));
+		}
+	}
+
+	private void traitors(CommandSender sender, String[] args) {
+		if(args.length == 0) {
+			sender.sendMessage("You need to provide an amount of traitors, like /traitor 2");
+			return;
+		}
+		try {
+			traitors = Integer.parseInt(args[0]);
+			Bukkit.broadcastMessage(String.format("The amount of traitors is now set to %d", traitors));
 		} catch (NumberFormatException e) {
 			sender.sendMessage(String.format("%s is not a valid integer", args[0]));
 		}
@@ -225,10 +245,19 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 		hunteeP.setSaturation(5);
 		hunteeP.setHealth(20);
 
+		ArrayList<Player> hunters = new ArrayList<>();
 		for(Player player: Bukkit.getServer().getOnlinePlayers()) {
-			if(!player.getUniqueId().equals(hunteeP.getUniqueId())) {
+			if(!player.getUniqueId().equals(huntee) && player.getGameMode() == GameMode.SURVIVAL) {
+				hunters.add(player);
 				giveCompass(player);
 			}
+		}
+		Random rand = new Random();
+		for(int i=0; i<traitors; i++) {
+			int idx = rand.nextInt(hunters.size());
+			Player traitor = hunters.get(idx);
+			traitor.sendMessage(ChatColor.RED + "You are a traitor");
+			hunters.remove(idx);
 		}
 
 		BukkitRunnable freeHunters = new BukkitRunnable() {
@@ -273,6 +302,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 								}
 								if(compass != null) {
 									CompassMeta compassMeta = (CompassMeta) compass.getItemMeta();
+									assert compassMeta != null;
 									compassMeta.setLodestoneTracked(false);
 									compassMeta.setLodestone(location);
 									compass.setItemMeta(compassMeta);
@@ -293,5 +323,21 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			"The hunters will be able to move in %d seconds",
 			hunteeName, compassUpdate, headStart
 		));
+	}
+
+	private void pause() {
+		world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, pause);
+		pause = !pause;
+		Bukkit.broadcastMessage("The game is " + (pause? "" : "un") + "paused");
+	}
+
+	private void gamemode(CommandSender sender, GameMode gameMode) {
+		if (gameEnded) {
+			if (sender instanceof Player) {
+				((Player)sender).setGameMode(gameMode);
+			}
+		} else {
+			sender.sendMessage("You can only do that after the game ends");
+		}
 	}
 }

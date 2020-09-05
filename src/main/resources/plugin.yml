@@ -1,5 +1,6 @@
 name: MCHunter
 version: "1.0"
+api-version: 1.16
 main: io.github.Inspirateur.MCHunter.Main
 author: Inspirateur
 description: Plugin to play the hunter game in Minecraft
@@ -16,3 +17,15 @@ commands:
   start:
     description: Start the game, which will end either when the Dragon or the huntee is dead.
     usage: /start
+  creative:
+    description: Set yourselve in creative mode (only after game end)
+    usage: /creative
+  spectator:
+    description: Set yourselve in spectator mode (only after game end)
+    usage: /spectator
+  pause:
+    description: Pause or Unpause the game
+    usage: /pause
+  traitor:
+    description: Set the amount of traitors for the game
+    usage: /traitor <amount>
