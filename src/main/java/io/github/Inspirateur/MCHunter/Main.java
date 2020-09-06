@@ -252,14 +252,6 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 				giveCompass(player);
 			}
 		}
-		Random rand = new Random();
-		for(int i=0; i<traitors; i++) {
-			int idx = rand.nextInt(hunters.size());
-			Player traitor = hunters.get(idx);
-			traitor.sendMessage(ChatColor.RED + "You are a traitor");
-			hunteeP.sendMessage(String.format("%s is a traitor", traitor.getName()));
-			hunters.remove(idx);
-		}
 
 		BukkitRunnable freeHunters = new BukkitRunnable() {
 			@Override
@@ -324,6 +316,15 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			"The hunters will be able to move in %d seconds",
 			hunteeName, compassUpdate, headStart
 		));
+
+		Random rand = new Random();
+		for(int i=0; i<traitors; i++) {
+			int idx = rand.nextInt(hunters.size());
+			Player traitor = hunters.get(idx);
+			traitor.sendMessage(ChatColor.RED + "You are a traitor");
+			hunteeP.sendMessage(String.format("%s is a traitor", traitor.getName()));
+			hunters.remove(idx);
+		}
 	}
 
 	private void pause() {
