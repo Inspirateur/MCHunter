@@ -257,6 +257,7 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			int idx = rand.nextInt(hunters.size());
 			Player traitor = hunters.get(idx);
 			traitor.sendMessage(ChatColor.RED + "You are a traitor");
+			hunteeP.sendMessage(String.format("%s is a traitor", traitor.getName()));
 			hunters.remove(idx);
 		}
 
