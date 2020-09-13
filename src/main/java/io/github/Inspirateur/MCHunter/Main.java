@@ -1,5 +1,9 @@
 package io.github.Inspirateur.MCHunter;
 import org.bukkit.*;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarFlag;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.KeyedBossBar;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EnderDragon;
@@ -29,6 +33,10 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 	private boolean hunterStarted = false;
 	private boolean pause = false;
 	private int headStart = 120;
+	private int timer = 0;
+	private BukkitRunnable updateTimer;
+	private KeyedBossBar timerBar;
+	private NamespacedKey timerKey;
 	private int traitors = 0;
 	private int compassUpdate = 1;
 	private UUID huntee = null;
@@ -54,6 +62,8 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 			world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
 			world.setTime(1000);
 		}
+		timerKey = NamespacedKey.minecraft("timer");
+		Bukkit.removeBossBar(timerKey);
 	}
 
 	@EventHandler
@@ -228,6 +238,18 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 		return null;
 	}
 
+	private void freeHunters() {
+		for(Player player: Bukkit.getServer().getOnlinePlayers()) {
+			if(!player.getUniqueId().equals(huntee)) {
+				player.setFoodLevel(20);
+				player.setSaturation(5);
+				player.setHealth(20);
+			}
+		}
+		hunterStarted = true;
+		Bukkit.broadcastMessage("The hunters are now free !");
+	}
+
 	private void start(CommandSender sender) {
 		if (this.huntee == null) {
 			sender.sendMessage("A huntee must be defined before the game can start  (/huntee to become the huntee)");
@@ -244,30 +266,37 @@ public class Main extends JavaPlugin implements Plugin, Listener {
 		hunteeP.setFoodLevel(20);
 		hunteeP.setSaturation(5);
 		hunteeP.setHealth(20);
-
+		timer = headStart;
+		timerBar = Bukkit.createBossBar(
+			timerKey, String.format("HeadStart %d", headStart), BarColor.BLUE, BarStyle.SEGMENTED_6
+		);
+		timerBar.setProgress(1);
 		ArrayList<Player> hunters = new ArrayList<>();
 		for(Player player: Bukkit.getServer().getOnlinePlayers()) {
 			if(!player.getUniqueId().equals(huntee) && player.getGameMode() == GameMode.SURVIVAL) {
 				hunters.add(player);
 				giveCompass(player);
 			}
+			timerBar.addPlayer(player);
 		}
 
-		BukkitRunnable freeHunters = new BukkitRunnable() {
+		updateTimer = new BukkitRunnable() {
 			@Override
 			public void run() {
-				for(Player player: Bukkit.getServer().getOnlinePlayers()) {
-					if(!player.getUniqueId().equals(huntee)) {
-						player.setFoodLevel(20);
-						player.setSaturation(5);
-						player.setHealth(20);
+				if(!pause) {
+					timer --;
+					timerBar.setTitle(String.format("HeadStart %d", timer));
+					timerBar.setProgress((float)timer/(float)headStart);
+					if(timer <= 0) {
+						freeHunters();
+						timerBar.setVisible(false);
+						Bukkit.removeBossBar(timerKey);
+						updateTimer.cancel();
 					}
 				}
-				hunterStarted = true;
-				Bukkit.broadcastMessage("The hunters are now free !");
 			}
 		};
-		freeHunters.runTaskLater(this, 20*headStart);
+		updateTimer.runTaskTimer(this, 0, 20);
 		BukkitRunnable updateCompass = new BukkitRunnable() {
 			@Override
 			public void run() {
